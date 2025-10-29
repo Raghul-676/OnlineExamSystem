@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Results Dashboard - Online Exam System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-graduation-cap"></i> Online Exam System
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/dashboard">Dashboard</a>
+                <a class="nav-link" href="/auth/logout">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Exam Info Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h4><i class="fas fa-chart-bar"></i> <span th:text="${exam.title}">Exam Title</span> - Results Dashboard</h4>
+                        <p class="mb-0" th:text="${exam.description}">Exam Description</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-2">
+                                <h5 class="text-primary" th:text="${#lists.size(results)}">0</h5>
+                                <small>Total Attempts</small>
+                            </div>
+                            <div class="col-md-2">
+                                <h5 class="text-success" th:text="${#lists.size(results.?[isPassed == true])}">0</h5>
+                                <small>Passed</small>
+                            </div>
+                            <div class="col-md-2">
+                                <h5 class="text-danger" th:text="${#lists.size(results.?[isPassed == false])}">0</h5>
+                                <small>Failed</small>
+                            </div>
+                            <div class="col-md-2">
+                                <h5 class="text-info" th:text="${#numbers.formatDecimal(averageScore, 1, 1)} + '%'">0%</h5>
+                                <small>Average Score</small>
+                            </div>
+                            <div class="col-md-2">
+                                <h5 class="text-warning" th:text="${exam.totalMarks}">0</h5>
+                                <small>Total Marks</small>
+                            </div>
+                            <div class="col-md-2">
+                                <h5 class="text-secondary" th:text="${exam.durationMinutes} + 'm'">0m</h5>
+                                <small>Duration</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Charts -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="fas fa-pie-chart"></i> Pass/Fail Distribution</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="passFailChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="fas fa-chart-line"></i> Score Distribution</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="scoreChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="fas fa-trophy"></i> Top Performers</h6>
+                    </div>
+                    <div class="card-body">
+                        <div th:if="${#lists.isEmpty(leaderboard)}" class="text-muted text-center py-3">
+                            No results available
+                        </div>
+                        <div th:each="result, iterStat : ${leaderboard}" th:if="${iterStat.count <= 5}" class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex align-items-center">
+                                <span class="badge me-2" th:classappend="${iterStat.count == 1} ? 'bg-warning' : (${iterStat.count == 2} ? 'bg-secondary' : (${iterStat.count == 3} ? 'bg-dark' : 'bg-light text-dark'))" th:text="${iterStat.count}">1</span>
+                                <span th:text="${result.student.fullName}">Student Name</span>
+                            </div>
+                            <div>
+                                <span class="badge bg-success" th:text="${result.score} + '/' + ${result.exam.totalMarks}">Score</span>
+                                <small class="text-muted" th:text="${#numbers.formatDecimal(result.percentage, 1, 1)} + '%'">%</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="fas fa-clock"></i> Time Analysis</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <h6 class="text-success" th:text="${results.stream().mapToInt(r -> r.timeTakenMinutes != null ? r.timeTakenMinutes : 0).min().orElse(0)} + 'm'">0m</h6>
+                                <small>Fastest</small>
+                            </div>
+                            <div class="col-4">
+                                <h6 class="text-warning" th:text="${T(java.lang.Math).round(results.stream().mapToInt(r -> r.timeTakenMinutes != null ? r.timeTakenMinutes : 0).average().orElse(0))} + 'm'">0m</h6>
+                                <small>Average</small>
+                            </div>
+                            <div class="col-4">
+                                <h6 class="text-danger" th:text="${results.stream().mapToInt(r -> r.timeTakenMinutes != null ? r.timeTakenMinutes : 0).max().orElse(0)} + 'm'">0m</h6>
+                                <small>Slowest</small>
+                            </div>
+                        </div>
+                        <div class="progress mt-3">
+                            <div class="progress-bar bg-info" role="progressbar" 
+                                 th:style="'width: ' + ${T(java.lang.Math).round((results.stream().mapToInt(r -> r.timeTakenMinutes != null ? r.timeTakenMinutes : 0).average().orElse(0) / exam.durationMinutes) * 100)} + '%'">
+                            </div>
+                        </div>
+                        <small class="text-muted">Average time utilization</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Results Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="fas fa-table"></i> Detailed Results</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Student</th>
+                                        <th>Score</th>
+                                        <th>Percentage</th>
+                                        <th>Status</th>
+                                        <th>Time Taken</th>
+                                        <th>Submitted At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="result, iterStat : ${leaderboard}">
+                                        <td>
+                                            <span class="badge bg-primary" th:text="${iterStat.count}">1</span>
+                                        </td>
+                                        <td th:text="${result.student.fullName}">Student Name</td>
+                                        <td>
+                                            <strong th:text="${result.score}">0</strong> / <span th:text="${result.exam.totalMarks}">0</span>
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar" 
+                                                     th:classappend="${result.isPassed} ? 'bg-success' : 'bg-danger'"
+                                                     th:style="'width: ' + ${result.percentage} + '%'"
+                                                     th:text="${#numbers.formatDecimal(result.percentage, 1, 1)} + '%'">
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge" th:classappend="${result.isPassed} ? 'bg-success' : 'bg-danger'">
+                                                <i th:class="${result.isPassed} ? 'fas fa-check' : 'fas fa-times'"></i>
+                                                <span th:text="${result.isPassed} ? 'PASSED' : 'FAILED'">Status</span>
+                                            </span>
+                                        </td>
+                                        <td th:text="${result.timeTakenMinutes} + ' min'">0 min</td>
+                                        <td th:text="${#temporals.format(result.submittedAt, 'dd/MM/yyyy HH:mm')}">Date</td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a th:href="@{/results/{id}(id=${result.id})}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a th:href="@{/feedback/result/{id}(id=${result.id})}" class="btn btn-sm btn-outline-success">
+                                                    <i class="fas fa-comment"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:inline="javascript">
+        // Pass/Fail Chart
+        const passFailCtx = document.getElementById('passFailChart').getContext('2d');
+        const passedCount = /*[[${#lists.size(results.?[isPassed == true])}]]*/ 0;
+        const failedCount = /*[[${#lists.size(results.?[isPassed == false])}]]*/ 0;
+        
+        new Chart(passFailCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Passed', 'Failed'],
+                datasets: [{
+                    data: [passedCount, failedCount],
+                    backgroundColor: ['#28a745', '#dc3545'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Score Distribution Chart
+        const scoreCtx = document.getElementById('scoreChart').getContext('2d');
+        const scores = /*[[${results.![percentage]}]]*/ [];
+        
+        // Create score ranges
+        const ranges = ['0-20%', '21-40%', '41-60%', '61-80%', '81-100%'];
+        const rangeCounts = [0, 0, 0, 0, 0];
+        
+        scores.forEach(score => {
+            if (score <= 20) rangeCounts[0]++;
+            else if (score <= 40) rangeCounts[1]++;
+            else if (score <= 60) rangeCounts[2]++;
+            else if (score <= 80) rangeCounts[3]++;
+            else rangeCounts[4]++;
+        });
+        
+        new Chart(scoreCtx, {
+            type: 'bar',
+            data: {
+                labels: ranges,
+                datasets: [{
+                    label: 'Number of Students',
+                    data: rangeCounts,
+                    backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#20c997', '#28a745'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

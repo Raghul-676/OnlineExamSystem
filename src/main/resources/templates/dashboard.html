@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Online Exam System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-graduation-cap"></i> Online Exam System
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user"></i> <span th:text="${user.fullName}">User</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/profile"><i class="fas fa-user-circle"></i> Profile</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/auth/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h2>Welcome, <span th:text="${user.fullName}">User</span>!</h2>
+                <p class="text-muted">Role: <span class="badge bg-primary" th:text="${userRole}">Role</span></p>
+            </div>
+        </div>
+
+        <!-- Student Dashboard -->
+        <div th:if="${userRole == 'STUDENT'}">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-clock"></i> Active Exams</h5>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${#lists.isEmpty(activeExams)}" class="text-muted">
+                                No active exams available
+                            </div>
+                            <div th:each="exam : ${activeExams}" class="mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong th:text="${exam.title}">Exam Title</strong>
+                                        <br><small class="text-muted" th:text="${exam.description}">Description</small>
+                                    </div>
+                                    <a th:href="@{/exams/{id}(id=${exam.id})}" class="btn btn-primary btn-sm">
+                                        Take Exam
+                                    </a>
+                                </div>
+                                <hr th:unless="${examStat.last}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-calendar"></i> Upcoming Exams</h5>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${#lists.isEmpty(upcomingExams)}" class="text-muted">
+                                No upcoming exams
+                            </div>
+                            <div th:each="exam : ${upcomingExams}" class="mb-2">
+                                <strong th:text="${exam.title}">Exam Title</strong>
+                                <br><small class="text-muted">
+                                    Starts: <span th:text="${#temporals.format(exam.startTime, 'dd/MM/yyyy HH:mm')}">Date</span>
+                                </small>
+                                <hr th:unless="${examStat.last}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-chart-line"></i> Recent Results</h5>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${#lists.isEmpty(recentResults)}" class="text-muted">
+                                No results available
+                            </div>
+                            <div th:each="result : ${recentResults}" class="mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong th:text="${result.exam.title}">Exam</strong>
+                                        <br><small class="text-muted">
+                                            Submitted: <span th:text="${#temporals.format(result.submittedAt, 'dd/MM/yyyy HH:mm')}">Date</span>
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge" th:classappend="${result.isPassed} ? 'bg-success' : 'bg-danger'"
+                                              th:text="${result.score} + '/' + ${result.exam.totalMarks}">Score</span>
+                                        <br><small th:text="${#numbers.formatDecimal(result.percentage, 1, 1)} + '%'">%</small>
+                                    </div>
+                                </div>
+                                <hr th:unless="${resultStat.last}">
+                            </div>
+                            <a href="/results" class="btn btn-outline-primary btn-sm">View All Results</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Teacher Dashboard -->
+        <div th:if="${userRole == 'TEACHER'}">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="fas fa-file-alt fa-3x text-primary mb-3"></i>
+                            <h5>Exam Engine</h5>
+                            <p class="text-muted">Create and manage exams</p>
+                            <a href="/exams/create" class="btn btn-primary">Create Exam</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="fas fa-question-circle fa-3x text-success mb-3"></i>
+                            <h5>Question Bank</h5>
+                            <p class="text-muted">Manage question repository</p>
+                            <a href="/questions" class="btn btn-success">Question Bank</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="fas fa-chart-bar fa-3x text-info mb-3"></i>
+                            <h5>Result Dashboard</h5>
+                            <p class="text-muted">Performance analytics</p>
+                            <a href="/results" class="btn btn-info">View Results</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="fas fa-comments fa-3x text-warning mb-3"></i>
+                            <h5>Feedback Module</h5>
+                            <p class="text-muted">Student feedback analysis</p>
+                            <a href="/results" class="btn btn-warning">View Feedback</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-list"></i> My Exams</h5>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${#lists.isEmpty(myExams)}" class="text-muted">
+                                No exams created yet. <a href="/exams/create">Create your first exam</a>
+                            </div>
+                            <div th:each="exam : ${myExams}" class="mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong th:text="${exam.title}">Exam Title</strong>
+                                        <br><small class="text-muted" th:text="${exam.description}">Description</small>
+                                        <br><small class="text-muted">
+                                            Duration: <span th:text="${exam.durationMinutes}">0</span> minutes |
+                                            Total Marks: <span th:text="${exam.totalMarks}">0</span>
+                                        </small>
+                                    </div>
+                                    <div>
+                                        <a th:href="@{/exams/{id}(id=${exam.id})}" class="btn btn-outline-primary btn-sm">View</a>
+                                        <a th:href="@{/results/exam/{id}(id=${exam.id})}" class="btn btn-outline-info btn-sm">Results</a>
+                                    </div>
+                                </div>
+                                <hr th:unless="${examStat.last}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div th:if="${userRole == 'ADMIN'}">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                            <h5>User Management</h5>
+                            <p class="text-muted">Manage users and roles</p>
+                            <a href="/admin/users" class="btn btn-primary">Manage Users</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="fas fa-file-alt fa-3x text-success mb-3"></i>
+                            <h5>Exam Engine</h5>
+                            <p class="text-muted">Monitor all exams</p>
+                            <a href="/exams" class="btn btn-success">View Exams</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="fas fa-chart-line fa-3x text-info mb-3"></i>
+                            <h5>System Analytics</h5>
+                            <p class="text-muted">Overall system performance</p>
+                            <a href="/results" class="btn btn-info">View Analytics</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="fas fa-cogs fa-3x text-secondary mb-3"></i>
+                            <h5>System Settings</h5>
+                            <p class="text-muted">Configure system</p>
+                            <a href="/admin/users" class="btn btn-secondary">Settings</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

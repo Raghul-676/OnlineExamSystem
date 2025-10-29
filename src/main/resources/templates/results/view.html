@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Result - Online Exam System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-graduation-cap"></i> Online Exam System
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/dashboard">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a class="nav-link" href="/auth/logout">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Result Summary -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card mb-4">
+                    <div class="card-header" th:classappend="${result.isPassed} ? 'bg-success text-white' : 'bg-danger text-white'">
+                        <h4><i class="fas fa-chart-line"></i> Exam Result</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5 th:text="${result.exam.title}">Exam Title</h5>
+                                <p class="text-muted" th:text="${result.exam.description}">Exam Description</p>
+                                <p><strong>Student:</strong> <span th:text="${result.student.fullName}">Student Name</span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-center">
+                                    <div class="display-4" th:classappend="${result.isPassed} ? 'text-success' : 'text-danger'">
+                                        <span th:text="${#numbers.formatDecimal(result.percentage, 1, 1)}">0.0</span>%
+                                    </div>
+                                    <h5 th:classappend="${result.isPassed} ? 'text-success' : 'text-danger'">
+                                        <span th:if="${result.isPassed}"><i class="fas fa-check-circle"></i> PASSED</span>
+                                        <span th:unless="${result.isPassed}"><i class="fas fa-times-circle"></i> FAILED</span>
+                                    </h5>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h5 class="text-primary" th:text="${result.score}">0</h5>
+                                        <small>Score Obtained</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h5 class="text-info" th:text="${result.exam.totalMarks}">0</h5>
+                                        <small>Total Marks</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h5 class="text-success" th:text="${result.correctAnswers}">0</h5>
+                                        <small>Correct Answers</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h5 class="text-warning" th:text="${result.timeTakenMinutes}">0</h5>
+                                        <small>Time Taken (min)</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Answers (for teachers or detailed view) -->
+        <div th:if="${userRole == 'TEACHER' or param.detailed}" class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-list-alt"></i> Detailed Answer Review</h5>
+                    </div>
+                    <div class="card-body">
+                        <div th:each="examQuestion, iterStat : ${examQuestions}" class="mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">Question <span th:text="${iterStat.count}">1</span></h6>
+                                        <div>
+                                            <span class="badge bg-info">Marks: <span th:text="${examQuestion.marks}">1</span></span>
+                                            <span th:if="${studentAnswers.get(examQuestion.question.id.toString()) != null and studentAnswers.get(examQuestion.question.id.toString()).equals(examQuestion.question.correctAnswer)}" 
+                                                  class="badge bg-success">
+                                                <i class="fas fa-check"></i> Correct
+                                            </span>
+                                            <span th:unless="${studentAnswers.get(examQuestion.question.id.toString()) != null and studentAnswers.get(examQuestion.question.id.toString()).equals(examQuestion.question.correctAnswer)}" 
+                                                  class="badge bg-danger">
+                                                <i class="fas fa-times"></i> Incorrect
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Question:</strong> <span th:text="${examQuestion.question.questionText}">Question text</span></p>
+                                    
+                                    <div th:if="${examQuestion.question.questionType.name() == 'MULTIPLE_CHOICE'}">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <p><strong>Options:</strong></p>
+                                                <ul class="list-unstyled">
+                                                    <li>A) <span th:text="${examQuestion.question.optionA}">Option A</span></li>
+                                                    <li>B) <span th:text="${examQuestion.question.optionB}">Option B</span></li>
+                                                    <li>C) <span th:text="${examQuestion.question.optionC}">Option C</span></li>
+                                                    <li>D) <span th:text="${examQuestion.question.optionD}">Option D</span></li>
+                                                </ul>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <p><strong>Student Answer:</strong> 
+                                                    <span class="badge bg-secondary" th:text="${studentAnswers.get(examQuestion.question.id.toString())} ?: 'Not Answered'">Answer</span>
+                                                </p>
+                                                <p><strong>Correct Answer:</strong> 
+                                                    <span class="badge bg-success" th:text="${examQuestion.question.correctAnswer}">Correct</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div th:unless="${examQuestion.question.questionType.name() == 'MULTIPLE_CHOICE'}">
+                                        <p><strong>Student Answer:</strong> 
+                                            <span th:text="${studentAnswers.get(examQuestion.question.id.toString())} ?: 'Not Answered'">Answer</span>
+                                        </p>
+                                        <p><strong>Correct Answer:</strong> 
+                                            <span th:text="${examQuestion.question.correctAnswer}">Correct Answer</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12 text-center">
+                <a href="/results" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Results
+                </a>
+                <a href="/dashboard" class="btn btn-secondary">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a th:href="@{/results/{id}(id=${result.id}, detailed=true)}" 
+                   th:if="${userRole == 'STUDENT' and not param.detailed}" 
+                   class="btn btn-info">
+                    <i class="fas fa-eye"></i> View Detailed Answers
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
